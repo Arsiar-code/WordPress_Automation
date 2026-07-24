@@ -1,0 +1,63 @@
+---
+- name: MySQL Setup
+  hosts: IPA
+  vars_files:
+    - secrets.yaml
+    - vars.yaml
+
+  tasks:
+  - name: Ensure database 'wordpress' exists
+    community.mysql.mysql_db:
+      name: wordpress
+      state: present
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+
+  - name: Ensure user 'wordpress' exists
+    community.mysql.mysql_user:
+      name: wordpress
+      password: "{{ my_db_password }}"
+      priv: 'wordpress.*:ALL'
+      host: localhost
+      state: present
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+
+  - name: Ensure all privileges are manually flushed
+    community.mysql.mysql_query:
+      query: "FLUSH PRIVILEGES"
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+
+  - name: Ensure content of 'wp-config-sample.php' is copied to 'wp-config.php'
+    ansible.builtin.copy:
+      src: /srv/www/wordpress/wp-config-sample.php
+      dest: /srv/www/wordpress/wp-config.php
+      remote_src: yes
+      owner: www-data
+      group: www-data
+
+  - name: Ensure all credentials in 'wp-config.php' are correctly replaced
+    ansible.builtin.replace:
+      path: /srv/www/wordpress/wp-config.php
+      regexp: "{{ item.regexp }}"
+      replace: "{{ item.replace }}"
+      owner: www-data
+      group: www-data
+    loop:
+      - { regexp: 'database_name_here', replace: 'wordpress'}
+      - { regexp: 'username_here', replace: 'wordpress'}
+      - { regexp: 'password_here', replace: "{{ my_db_password }}"}
+    no_log: true
+
+  - name: Ensure standard security salts are deleted in 'wp-config.php'
+    ansible.builtin.lineinfile:
+      path: /srv/www/wordpress/wp-config.php
+      regexp: "^define\\s*\\(\\s*'{{ item }}'.*put your unique phrase here.*"
+      state: absent
+    loop:
+    - AUTH_KEY
+    - SECURE_AUTH_KEY
+    - LOGGED_IN_KEY
+    - NONCE_KEY
+    - AUTH_SALT
+    - SECURE_AUTH_SALT
+    - LOGGED_IN_SALT
+    - NONCE_SALT

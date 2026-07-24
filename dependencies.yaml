@@ -1,0 +1,34 @@
+---
+- name: Install and manage all dependencies
+  hosts: IPA
+  vars_files:
+    - secrets.yaml
+
+  tasks:
+  - name: Ensure all packages are installed
+    ansible.builtin.apt:
+      pkg:
+      - apache2
+      - ghostscript
+      - libapache2-mod-php
+      - mysql-server
+      - php
+      - php-bcmath
+      - php-curl
+      - php-imagick
+      - php-intl
+      - php-json
+      - php-mbstring
+      - php-mysql
+      - php-xml
+      - php-zip
+
+  - name: Ensure PyMySQL is installed
+    ansible.builtin.apt:
+      name: python3-pymysql
+      state: present
+
+  - name: Ensure packages are updated
+    ansible.builtin.apt:
+      name: "*"
+      state: latest

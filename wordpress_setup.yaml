@@ -1,0 +1,21 @@
+---
+- name: Wordpress Setup
+  hosts: IPA
+  vars_files:
+    - secrets.yaml
+
+  tasks:
+  - name: Ensure installation directory for wordpress exists
+    ansible.builtin.file:
+      path: /srv/www
+      owner: www-data
+      group: www-data
+      state: directory
+
+  - name: Ensure wordpress zip-file is installed and unpacked
+    ansible.builtin.unarchive:
+      src: https://wordpress.org/latest.tar.gz
+      dest: /srv/www
+      remote_src: yes
+      owner: www-data
+      group: www-data

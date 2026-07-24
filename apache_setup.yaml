@@ -1,0 +1,40 @@
+---
+- name: Apache Setup
+  hosts: IPA
+  vars_files:
+    - secrets.yaml
+
+  tasks:
+  - name: Ensure wordpress config file exists
+    ansible.builtin.file:
+      path: /etc/apache2/sites-available/wordpress.conf
+      state: touch
+      mode: '0755'
+
+  - name: Ensure 'wordpress.conf.j2' file is used in 'wordpress.conf'
+    ansible.builtin.template:
+      src: templates/wordpress.conf.j2
+      dest: /etc/apache2/sites-available/wordpress.conf
+
+  - name: Ensure standard Apache HTML-site is deleted
+    ansible.builtin.file:
+      path: /var/www/html/index.html
+      state: absent
+  
+  - name: Ensure wordpress site is activated
+    ansible.builtin.command: a2ensite wordpress.conf
+    args:
+      creates: /etc/apache2/sites-available/wordpress.conf
+    notify: Apache reloaded
+
+  - name: Ensure standard Apache site is deactivated
+    ansible.builtin.command: a2dissite 000-default.conf
+    args:
+      removes: /etc/apache2/sites-available/000-default.conf
+    notify: Apache reloaded
+
+  handlers:
+    - name: Apache reloaded
+      ansible.builtin.service:
+        name: apache2
+        state: reloaded
